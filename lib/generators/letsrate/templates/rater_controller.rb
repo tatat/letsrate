@@ -11,8 +11,10 @@ class RaterController < ApplicationController
       
       render :json => true 
     else
-      render :json => false        
+      render :json => false, :status => 403
     end
+  rescue Letsrate::RateLimitExceeded
+    render :json => false, :status => 429
   end                                        
   
   protected
