@@ -1,12 +1,12 @@
 class RaterController < ApplicationController 
   
-  def create                                  
+  def create                                
     if current_user.present?
-      obj = params[:klass].classify.constantize.find(params[:id])
+      obj = klass_param.classify.constantize.find(id_param)
       if params[:dimension].present?
-        obj.rate params[:score].to_i, current_user.id, "#{params[:dimension]}"       
+        obj.rate score_param.to_i, current_user.id, "#{params[:dimension]}"       
       else
-        obj.rate params[:score].to_i, current_user.id 
+        obj.rate score_param.to_i, current_user.id 
       end
       
       render :json => true 
@@ -15,5 +15,18 @@ class RaterController < ApplicationController
     end
   end                                        
   
+  protected
+
+  [:id, :klass, :score, :dimension].each do |param|
+    if defined? StrongParameters
+      define_method :"#{param}_param" do
+        params.require(param)
+      end
+    else
+      define_method :"#{param}_param" do
+        params[param]
+      end
+    end
+  end
   
 end
