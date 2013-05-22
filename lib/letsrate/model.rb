@@ -1,6 +1,8 @@
 require 'active_support/concern'
 module Letsrate
   extend ActiveSupport::Concern
+
+  class RateLimitExceeded < RuntimeError; end
   
   def rate(stars, user_id, dimension=nil)
     if can_rate? user_id, dimension
@@ -11,7 +13,7 @@ module Letsrate
       end      
       update_rate_average(stars, dimension)
     else
-      raise "User has already rated."                       
+      raise RateLimitExceeded.new("User has already rated.")
     end
   end 
   
