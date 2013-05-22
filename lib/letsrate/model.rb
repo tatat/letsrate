@@ -90,16 +90,16 @@ module Letsrate
                                                                                          :dependent  => :destroy
 
         dimensions.each do |dimension|        
-          has_many "#{dimension}_rates", lambda { where({:dimension => dimension.to_s}) }, :as         => :rateable, 
-                                                                                           :class_name => "Rate", 
-                                                                                           :dependent  => :destroy
-                                         
-          has_many "#{dimension}_raters", :through => "#{dimension}_rates",
-                                          :source  => :rater         
-          
-          has_one  "#{dimension}_average", lambda { where({:dimension => dimension.to_s}) }, :as         => :cacheable,
-                                                                                            :class_name => "RatingCache", 
+          has_many :"#{dimension}_rates", lambda { where({:dimension => dimension.to_s}) }, :as         => :rateable, 
+                                                                                            :class_name => "Rate", 
                                                                                             :dependent  => :destroy
+                                         
+          has_many :"#{dimension}_raters", :through => :"#{dimension}_rates",
+                                           :source  => :rater         
+          
+          has_one  :"#{dimension}_average", lambda { where({:dimension => dimension.to_s}) }, :as         => :cacheable,
+                                                                                              :class_name => "RatingCache", 
+                                                                                              :dependent  => :destroy
         end 
       end
     else
@@ -109,20 +109,20 @@ module Letsrate
         has_many :rates_without_dimension, :as => :rateable, :class_name => "Rate", :dependent => :destroy, :conditions => {:dimension => nil}
         has_many :raters_without_dimension, :through => :rates_without_dimension, :source => :rater  
         
-        has_one :rate_average_without_dimension, :as => :cacheable, :class_name => "RatingCache", 
-                :dependent => :destroy, :conditions => {:dimension => nil}
+        has_one  :rate_average_without_dimension, :as => :cacheable, :class_name => "RatingCache", 
+                 :dependent => :destroy, :conditions => {:dimension => nil}
         
 
         dimensions.each do |dimension|        
-          has_many "#{dimension}_rates", :dependent => :destroy, 
-                                         :conditions => {:dimension => dimension.to_s}, 
-                                         :class_name => "Rate", 
-                                         :as => :rateable
+          has_many :"#{dimension}_rates", :dependent => :destroy, 
+                                          :conditions => {:dimension => dimension.to_s}, 
+                                          :class_name => "Rate", 
+                                          :as => :rateable
                                          
-          has_many "#{dimension}_raters", :through => "#{dimension}_rates", :source => :rater         
+          has_many :"#{dimension}_raters", :through => :"#{dimension}_rates", :source => :rater         
           
-          has_one "#{dimension}_average", :as => :cacheable, :class_name => "RatingCache", 
-                                          :dependent => :destroy, :conditions => {:dimension => dimension.to_s}
+          has_one  :"#{dimension}_average", :as => :cacheable, :class_name => "RatingCache", 
+                                            :dependent => :destroy, :conditions => {:dimension => dimension.to_s}
         end                                                    
       end
     end
