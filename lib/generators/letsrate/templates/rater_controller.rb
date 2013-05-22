@@ -17,7 +17,7 @@ class RaterController < ApplicationController
   
   protected
 
-  [:id, :klass, :score, :dimension].each do |param|
+  [:id, :klass, :score].each do |param|
     if defined? StrongParameters
       define_method :"#{param}_param" do
         params.require(param)
