@@ -4,67 +4,69 @@ module Letsrate
 
   class RateLimitExceeded < RuntimeError; end
   
-  def rate(stars, user_id, dimension=nil)
-    if can_rate? user_id, dimension
-      rates(dimension).build do |r|
-        r.stars = stars
-        r.rater_id = user_id
-        r.save!          
+  module Ratee
+    def rate(stars, user_id, dimension=nil)
+      if can_rate? user_id, dimension
+        rates(dimension).build do |r|
+          r.stars = stars
+          r.rater_id = user_id
+          r.save!          
+        end      
+        update_rate_average(stars, dimension)
+      else
+        raise RateLimitExceeded.new("User has already rated.")
+      end
+    end 
+    
+    def update_rate_average(stars, dimension=nil)
+      if average(dimension).nil?
+        RatingCache.create do |avg|
+          avg.cacheable_id = self.id
+          avg.cacheable_type = self.class.name
+          avg.avg = stars
+          avg.qty = 1
+          avg.dimension = dimension
+          avg.save!
+        end                     
+      else
+        a = average(dimension)
+        a.avg = (a.avg*a.qty + stars) / (a.qty+1)
+        a.qty = a.qty + 1
+        a.save!
+      end   
+    end                               
+    
+    def average(dimension=nil)
+      if dimension.nil?
+        self.send "rate_average_without_dimension"
+      else
+        self.send "#{dimension}_average"
       end      
-      update_rate_average(stars, dimension)
-    else
-      raise RateLimitExceeded.new("User has already rated.")
     end
-  end 
-  
-  def update_rate_average(stars, dimension=nil)
-    if average(dimension).nil?
-      RatingCache.create do |avg|
-        avg.cacheable_id = self.id
-        avg.cacheable_type = self.class.name
-        avg.avg = stars
-        avg.qty = 1
-        avg.dimension = dimension
-        avg.save!
-      end                     
-    else
-      a = average(dimension)
-      a.avg = (a.avg*a.qty + stars) / (a.qty+1)
-      a.qty = a.qty + 1
-      a.save!
-    end   
-  end                               
-  
-  def average(dimension=nil)
-    if dimension.nil?
-      self.send "rate_average_without_dimension"
-    else
-      self.send "#{dimension}_average"
-    end      
-  end        
-      
-  def can_rate?(user_id, dimension=nil)
-    query  = 'SELECT COUNT(*) AS "cnt" FROM "rates" WHERE "rateable_id"=? AND "rateable_type"=? AND "rater_id"=?'
-    query  = self.class.send(:sanitize_sql_array, [query, self.id, self.class.name, user_id])
-    query += ' AND ' + (dimension.nil? ? '"dimension" IS NULL' : self.class.send(:sanitize_sql_array, ['"dimension"=?', dimension]))
-    self.class.connection.select_value(query).to_i == 0
-  end    
-  
-  def rates(dimension=nil)
-    if dimension.nil?
-      self.send "rates_without_dimension"
-    else
-      self.send "#{dimension}_rates"
+
+    def can_rate?(user_id, dimension=nil)
+      query  = 'SELECT COUNT(*) AS "cnt" FROM "rates" WHERE "rateable_id"=? AND "rateable_type"=? AND "rater_id"=?'
+      query  = self.class.send(:sanitize_sql_array, [query, self.id, self.class.name, user_id])
+      query += ' AND ' + (dimension.nil? ? '"dimension" IS NULL' : self.class.send(:sanitize_sql_array, ['"dimension"=?', dimension]))
+      self.class.connection.select_value(query).to_i == 0
     end
-  end
-  
-  def raters(dimension=nil)
-    if dimension.nil?
-      self.send "raters_without_dimension"
-    else
-      self.send "#{dimension}_raters"
-    end      
-  end
+
+    def rates(dimension=nil)
+      if dimension.nil?
+        self.send "rates_without_dimension"
+      else
+        self.send "#{dimension}_rates"
+      end
+    end
+    
+    def raters(dimension=nil)
+      if dimension.nil?
+        self.send "raters_without_dimension"
+      else
+        self.send "#{dimension}_raters"
+      end      
+    end
+  end   
 
   module ClassMethods
     
@@ -74,6 +76,8 @@ module Letsrate
     
     if Rails::VERSION::MAJOR >= 4
       def letsrate_rateable(*dimensions)
+        include Ratee
+
         has_many :rates_without_dimension, lambda { where({:dimension => nil}) }, :as         => :rateable,
                                                                                   :class_name => "Rate",
                                                                                   :dependent  => :destroy
@@ -100,6 +104,8 @@ module Letsrate
       end
     else
       def letsrate_rateable(*dimensions)
+        include Ratee
+        
         has_many :rates_without_dimension, :as => :rateable, :class_name => "Rate", :dependent => :destroy, :conditions => {:dimension => nil}
         has_many :raters_without_dimension, :through => :rates_without_dimension, :source => :rater  
         
