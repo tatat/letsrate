@@ -45,9 +45,9 @@ module Letsrate
     end
 
     def can_rate?(user_id, dimension=nil)
-      query  = 'SELECT COUNT(*) AS "cnt" FROM "rates" WHERE "rateable_id"=? AND "rateable_type"=? AND "rater_id"=?'
+      query  = 'SELECT COUNT(*) AS cnt FROM rates WHERE rateable_id=? AND rateable_type=? AND rater_id=?'
       query  = self.class.send(:sanitize_sql_array, [query, self.id, self.class.name, user_id])
-      query += ' AND ' + (dimension.nil? ? '"dimension" IS NULL' : self.class.send(:sanitize_sql_array, ['"dimension"=?', dimension]))
+      query += ' AND ' + (dimension.nil? ? 'dimension IS NULL' : self.class.send(:sanitize_sql_array, ['dimension=?', dimension]))
       self.class.connection.select_value(query).to_i == 0
     end
 
