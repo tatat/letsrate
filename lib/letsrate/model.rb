@@ -29,21 +29,21 @@ module Letsrate
     
     def update_rate_average(stars, dimension=nil)
       if average(dimension).nil?
-        RatingCache.create do |avg|
-          avg.cacheable_id = self.id
+        RatingCache.create! do |avg|
+          avg.cacheable_id   = self.id
           avg.cacheable_type = self.class.name
-          avg.avg = stars
-          avg.qty = 1
-          avg.dimension = dimension
-          avg.save!
-        end                     
+          avg.avg            = stars
+          avg.qty            = 1
+          avg.dimension      = dimension
+        end
       else
-        a = average(dimension)
-        a.avg = (a.avg*a.qty + stars) / (a.qty+1)
+        a     = average(dimension)
+        a.avg = (a.avg * a.qty + stars) / (a.qty+1)
         a.qty = a.qty + 1
         a.save!
-      end   
-    end                               
+        a
+      end
+    end
     
     def average(dimension=nil)
       if dimension.nil?
